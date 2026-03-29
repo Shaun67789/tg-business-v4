@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}Statistics{% endblock %}
+{% block page_title %}📈 Statistics{% endblock %}
+
+{% block content %}
+<div class="stats-grid mb-4">
+  <div class="stat-card stat-blue">
+    <div class="stat-icon">👥</div>
+    <div class="stat-info"><div class="stat-value">{{ stats.total_users }}</div><div class="stat-label">Total Users</div></div>
+  </div>
+  <div class="stat-card stat-purple">
+    <div class="stat-icon">💰</div>
+    <div class="stat-info"><div class="stat-value">৳{{ "%.0f"|format(stats.total_revenue) }}</div><div class="stat-label">Total Revenue</div></div>
+  </div>
+  <div class="stat-card stat-green">
+    <div class="stat-icon">✅</div>
+    <div class="stat-info"><div class="stat-value">{{ stats.confirmed_orders }}</div><div class="stat-label">Confirmed</div></div>
+  </div>
+  <div class="stat-card stat-yellow">
+    <div class="stat-icon">⏳</div>
+    <div class="stat-info"><div class="stat-value">{{ stats.pending_orders }}</div><div class="stat-label">Pending</div></div>
+  </div>
+</div>
+
+<div class="row-2col">
+  <div class="glass-card">
+    <h3 class="card-title">📊 Revenue Over Time</h3>
+    <canvas id="revenueTimeChart" height="250"></canvas>
+  </div>
+  <div class="glass-card">
+    <h3 class="card-title">🛒 Orders by Service</h3>
+    <canvas id="serviceChart" height="250"></canvas>
+  </div>
+</div>
+
+{% block scripts %}
+<script>
+async function loadCharts() {
+  const res = await fetch('/admin/stats/api/chart-data');
+  const data = await res.json();
+
+  // Revenue over time
+  new Chart(document.getElementById('revenueTimeChart'), {
+    type: 'line',
+    data: {
+      labels: data.labels,
+      datasets: [{
+        label: 'Revenue (BDT)',
+        data: data.revenue,
+        borderColor: '#6366f1',
+        backgroundColor: 'rgba(99,102,241,0.15)',
+        tension: 0.4,
+        fill: true,
+        pointBackgroundColor: '#6366f1',
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { labels: { color: '#e2e8f0', font: {family:'Inter'} } } },
+      scales: {
+        x: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+        y: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+      }
+    }
+  });
+
+  // Service breakdown
+  const svcLabels = Object.keys(data.by_service).map(k=>k.charAt(0).toUpperCase()+k.slice(1));
+  const svcValues = Object.values(data.by_service);
+  new Chart(document.getElementById('serviceChart'), {
+    type: 'bar',
+    data: {
+      labels: svcLabels.length ? svcLabels : ['No data'],
+      datasets: [{
+        label: 'Revenue (BDT)',
+        data: svcValues.length ? svcValues : [0],
+        backgroundColor: ['#6366f1','#8b5cf6','#06b6d4','#10b981','#f59e0b'],
+        borderRadius: 8,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: '#94a3b8' }, grid: { display: false } },
+        y: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+      }
+    }
+  });
+}
+loadCharts();
+</script>
+{% endblock %}
+{% endblock %}

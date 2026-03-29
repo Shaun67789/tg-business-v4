@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}User Orders{% endblock %}
+{% block page_title %}📦 Orders for {{ user.first_name if user else 'User' }}{% endblock %}
+{% block content %}
+<a href="/admin/users/" class="btn btn-ghost mb-4">← Back to Users</a>
+{% if user %}
+<div class="glass-card mb-4">
+  <p>👤 <strong>{{ user.first_name }} {{ user.last_name or '' }}</strong>
+  {% if user.username %} | @{{ user.username }}{% endif %}
+  | ID: <code>{{ user.telegram_id }}</code>
+  | Joined: {{ user.joined_at[:10] if user.joined_at else '—' }}</p>
+</div>
+{% endif %}
+<div class="glass-card">
+  <div class="table-wrapper">
+    <table class="data-table">
+      <thead><tr><th>Order ID</th><th>Service</th><th>TXN</th><th>Amount</th><th>Status</th><th>Date</th></tr></thead>
+      <tbody>
+      {% for o in orders %}
+      <tr>
+        <td><code>{{ o.order_id }}</code></td>
+        <td>{{ o.service | title }}</td>
+        <td><code class="code-small">{{ o.txn_id }}</code></td>
+        <td>৳{{ "%.0f"|format(o.amount_bdt) }}</td>
+        <td><span class="badge badge-{{ o.status }}">{{ o.status | replace('_',' ') | upper }}</span></td>
+        <td class="text-muted text-sm">{{ o.created_at[:10] if o.created_at else '—' }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6" class="text-center text-muted">No orders for this user</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block title %}Users{% endblock %}
+{% block page_title %}👥 Users Management{% endblock %}
+
+{% block content %}
+<div class="glass-card mb-4">
+  <form method="get" class="filter-row">
+    <div class="filter-group" style="flex:1">
+      <input type="text" name="search" value="{{ search }}" class="form-input" placeholder="🔍 Search by name, username or ID…"/>
+    </div>
+    <button type="submit" class="btn btn-primary">Search</button>
+    {% if search %}<a href="/admin/users/" class="btn btn-ghost">Clear</a>{% endif %}
+    <span class="text-muted ml-auto">{{ total }} users</span>
+  </form>
+</div>
+
+<div class="glass-card">
+  <div class="table-wrapper">
+    <table class="data-table">
+      <thead>
+        <tr><th>Telegram ID</th><th>Name</th><th>Username</th><th>Joined</th><th>Status</th><th>Actions</th></tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+        <tr id="user-row-{{ u.telegram_id }}">
+          <td><code>{{ u.telegram_id }}</code></td>
+          <td>{{ u.first_name }} {{ u.last_name or '' }}</td>
+          <td>{% if u.username %}<span class="text-accent">@{{ u.username }}</span>{% else %}<span class="text-muted">—</span>{% endif %}</td>
+          <td class="text-muted text-sm">{{ u.joined_at[:10] if u.joined_at else '—' }}</td>
+          <td>
+            {% if u.is_banned %}
+            <span class="badge badge-cancelled">BANNED</span>
+            {% else %}
+            <span class="badge badge-confirmed">ACTIVE</span>
+            {% endif %}
+          </td>
+          <td>
+            <div class="action-btns">
+              <a href="/admin/users/{{ u.telegram_id }}/orders" class="btn btn-xs btn-blue">📦 Orders</a>
+              {% if u.is_banned %}
+              <button class="btn btn-xs btn-green" onclick="unbanUser({{ u.telegram_id }})">✅ Unban</button>
+              {% else %}
+              <button class="btn btn-xs btn-red" onclick="banUser({{ u.telegram_id }})">🚫 Ban</button>
+              {% endif %}
+              <button class="btn btn-xs btn-ghost" onclick="openMessageModal({{ u.telegram_id }}, '{{ u.first_name | replace("'", "\\'") }}')">💬 Message</button>
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" class="text-center text-muted">No users found</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="pagination">
+    {% if page > 0 %}<a href="?page={{ page-1 }}&search={{ search }}" class="btn btn-sm btn-ghost">◀ Prev</a>{% endif %}
+    <span class="text-muted">Page {{ page+1 }} / {{ total_pages }}</span>
+    {% if page < total_pages-1 %}<a href="?page={{ page+1 }}&search={{ search }}" class="btn btn-sm btn-ghost">Next ▶</a>{% endif %}
+  </div>
+</div>
+
+<!-- Message Modal -->
+<div id="msgModal" class="modal hidden">
+  <div class="modal-backdrop" onclick="closeMsgModal()"></div>
+  <div class="modal-box glass-card">
+    <div class="modal-header">
+      <h3 id="msgModalTitle">💬 Send Message</h3>
+      <button onclick="closeMsgModal()" class="modal-close">×</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="msgTargetId"/>
+      <div class="form-group">
+        <label class="form-label">Message (HTML supported)</label>
+        <textarea id="msgText" class="form-input" rows="5" placeholder="Enter message…"></textarea>
+      </div>
+      <button class="btn btn-primary btn-full" onclick="sendMessage()">📤 Send Message</button>
+    </div>
+  </div>
+</div>
+
+{% block scripts %}
+<script>
+async function banUser(id) {
+  if (!confirm(`Ban user ${id}?`)) return;
+  const res = await fetch(`/admin/users/${id}/ban`, {method:'POST'});
+  if (res.ok) { showToast('User banned','error'); location.reload(); }
+}
+async function unbanUser(id) {
+  if (!confirm(`Unban user ${id}?`)) return;
+  const res = await fetch(`/admin/users/${id}/unban`, {method:'POST'});
+  if (res.ok) { showToast('User unbanned','success'); location.reload(); }
+}
+function openMessageModal(id, name) {
+  document.getElementById('msgTargetId').value = id;
+  document.getElementById('msgModalTitle').textContent = `💬 Message ${name} (${id})`;
+  document.getElementById('msgModal').classList.remove('hidden');
+}
+function closeMsgModal() {
+  document.getElementById('msgModal').classList.add('hidden');
+}
+async function sendMessage() {
+  const id = document.getElementById('msgTargetId').value;
+  const text = document.getElementById('msgText').value;
+  if (!text.trim()) return showToast('Enter a message','error');
+  const res = await fetch(`/admin/users/${id}/message`, {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({text}),
+  });
+  if (res.ok) { showToast('Message sent!','success'); closeMsgModal(); }
+  else { showToast('Failed to send message','error'); }
+}
+</script>
+{% endblock %}
+{% endblock %}

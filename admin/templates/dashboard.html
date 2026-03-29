@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}📊 Dashboard{% endblock %}
+
+{% block content %}
+{% if error %}
+<div class="alert alert-error mb-4">
+  <span>⚠️</span> {{ error }}
+</div>
+{% endif %}
+
+<!-- Stat Cards -->
+<div class="stats-grid">
+  <div class="stat-card stat-blue">
+    <div class="stat-icon">👥</div>
+    <div class="stat-info">
+      <div class="stat-value">{{ stats.total_users | default(0) | int }}</div>
+      <div class="stat-label">Total Users</div>
+    </div>
+  </div>
+  <div class="stat-card stat-yellow">
+    <div class="stat-icon">⏳</div>
+    <div class="stat-info">
+      <div class="stat-value">{{ stats.pending_orders | default(0) | int }}</div>
+      <div class="stat-label">Pending Orders</div>
+    </div>
+  </div>
+  <div class="stat-card stat-green">
+    <div class="stat-icon">✅</div>
+    <div class="stat-info">
+      <div class="stat-value">{{ stats.confirmed_orders | default(0) | int }}</div>
+      <div class="stat-label">Confirmed Orders</div>
+    </div>
+  </div>
+  <div class="stat-card stat-purple">
+    <div class="stat-icon">💰</div>
+    <div class="stat-info">
+      <div class="stat-value">৳{{ "%.0f" | format(stats.total_revenue | default(0)) }}</div>
+      <div class="stat-label">Total Revenue</div>
+    </div>
+  </div>
+  <div class="stat-card stat-red">
+    <div class="stat-icon">🚫</div>
+    <div class="stat-info">
+      <div class="stat-value">{{ stats.cancelled_orders | default(0) | int }}</div>
+      <div class="stat-label">Cancelled</div>
+    </div>
+  </div>
+  <div class="stat-card stat-orange">
+    <div class="stat-icon">❌</div>
+    <div class="stat-info">
+      <div class="stat-value">{{ stats.wrong_txn_orders | default(0) | int }}</div>
+      <div class="stat-label">Wrong TXN</div>
+    </div>
+  </div>
+</div>
+
+<!-- Revenue by Service -->
+<div class="row-2col">
+  <div class="glass-card">
+    <h3 class="card-title">💰 Revenue by Service</h3>
+    <canvas id="revenueChart" height="220"></canvas>
+  </div>
+  <div class="glass-card">
+    <h3 class="card-title">📦 Recent Orders</h3>
+    <div class="table-wrapper">
+      <table class="data-table">
+        <thead>
+          <tr><th>Order ID</th><th>Service</th><th>Amount</th><th>Status</th></tr>
+        </thead>
+        <tbody>
+          {% for o in recent_orders %}
+          <tr>
+            <td><code>{{ o.order_id }}</code></td>
+            <td>{{ o.service | title }}</td>
+            <td>৳{{ "%.0f" | format(o.amount_bdt) }}</td>
+            <td><span class="badge badge-{{ o.status }}">{{ o.status | upper }}</span></td>
+          </tr>
+          {% else %}
+          <tr><td colspan="4" class="text-center text-muted">No orders yet</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <a href="/admin/orders/" class="btn btn-sm btn-ghost mt-2">View All Orders →</a>
+  </div>
+</div>
+
+{% block scripts %}
+<script>
+const byService = {{ (stats.revenue_by_service or {}) | tojson | safe }};
+const labels = Object.keys(byService).map(k => k.charAt(0).toUpperCase() + k.slice(1));
+const values = Object.values(byService);
+const colors = ['#6366f1','#8b5cf6','#06b6d4','#10b981','#f59e0b'];
+
+new Chart(document.getElementById('revenueChart'), {
+  type: 'doughnut',
+  data: {
+    labels: labels.length ? labels : ['No data'],
+    datasets: [{
+      data: values.length ? values : [1],
+      backgroundColor: colors,
+      borderColor: 'transparent',
+      hoverOffset: 8,
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { position: 'bottom', labels: { color: '#e2e8f0', font: { family: 'Inter' } } }
+    }
+  }
+});
+</script>
+{% endblock %}
+{% endblock %}

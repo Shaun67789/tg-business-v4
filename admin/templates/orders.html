@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% block title %}Orders{% endblock %}
+{% block page_title %}📦 Orders Management{% endblock %}
+
+{% block content %}
+<!-- Filters -->
+<div class="glass-card mb-4">
+  <form method="get" class="filter-row">
+    <div class="filter-group">
+      <label class="form-label">Status</label>
+      <select name="status" class="form-select" onchange="this.form.submit()">
+        <option value="">All</option>
+        {% for s in ['pending','confirmed','cancelled','wrong_txn'] %}
+        <option value="{{ s }}" {% if status_filter==s %}selected{% endif %}>{{ s | replace('_',' ') | title }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="filter-group">
+      <label class="form-label">Service</label>
+      <select name="service" class="form-select" onchange="this.form.submit()">
+        <option value="">All</option>
+        {% for svc in ['stars','premium','views','reactions','members'] %}
+        <option value="{{ svc }}" {% if service_filter==svc %}selected{% endif %}>{{ svc | title }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="filter-group filter-info">
+      <span class="text-muted">{{ total }} orders found</span>
+    </div>
+  </form>
+</div>
+
+<!-- Orders Table -->
+<div class="glass-card">
+  <div class="table-wrapper">
+    <table class="data-table" id="ordersTable">
+      <thead>
+        <tr>
+          <th>Order ID</th><th>Service</th><th>User ID</th><th>TXN ID</th>
+          <th>Amount</th><th>Status</th><th>Date</th><th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for o in orders %}
+        <tr id="row-{{ o.order_id }}">
+          <td><code class="code-small">{{ o.order_id }}</code></td>
+          <td>
+            <span class="svc-badge svc-{{ o.service }}">
+              {{ {'stars':'🌟','premium':'💎','views':'👁','reactions':'❤️','members':'👥'}.get(o.service,'📦') }}
+              {{ o.service | title }}
+            </span>
+          </td>
+          <td><code>{{ o.user_id }}</code></td>
+          <td><code class="code-small">{{ o.txn_id }}</code></td>
+          <td class="text-right"><strong>৳{{ "%.0f" | format(o.amount_bdt) }}</strong></td>
+          <td><span class="badge badge-{{ o.status }}" id="status-{{ o.order_id }}">{{ o.status | replace('_',' ') | upper }}</span></td>
+          <td class="text-muted text-sm">{{ o.created_at[:10] }}</td>
+          <td>
+            <div class="action-btns">
+              <button class="btn btn-xs btn-green" onclick="updateStatus('{{ o.order_id }}','confirmed')">✅</button>
+              <button class="btn btn-xs btn-red" onclick="updateStatus('{{ o.order_id }}','wrong_txn')">❌</button>
+              <button class="btn btn-xs btn-gray" onclick="updateStatus('{{ o.order_id }}','cancelled')">🚫</button>
+              <button class="btn btn-xs btn-blue" onclick="viewDetails('{{ o.order_id }}', {{ o | tojson | safe }})">👁</button>
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="8" class="text-center text-muted">No orders found</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination -->
+  <div class="pagination">
+    {% if page > 0 %}
+    <a href="?page={{ page-1 }}&status={{ status_filter or '' }}&service={{ service_filter or '' }}" class="btn btn-sm btn-ghost">◀ Previous</a>
+    {% endif %}
+    <span class="text-muted">Page {{ page + 1 }} / {{ total_pages }}</span>
+    {% if page < total_pages - 1 %}
+    <a href="?page={{ page+1 }}&status={{ status_filter or '' }}&service={{ service_filter or '' }}" class="btn btn-sm btn-ghost">Next ▶</a>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Order Detail Modal -->
+<div id="orderModal" class="modal hidden">
+  <div class="modal-backdrop" onclick="closeModal()"></div>
+  <div class="modal-box glass-card">
+    <div class="modal-header">
+      <h3>📦 Order Details</h3>
+      <button onclick="closeModal()" class="modal-close">×</button>
+    </div>
+    <div id="modalContent" class="modal-body"></div>
+  </div>
+</div>
+
+{% block scripts %}
+<script>
+async function updateStatus(orderId, status) {
+  const labels = {confirmed:'✅ Confirmed',wrong_txn:'❌ Wrong TXN',cancelled:'🚫 Cancelled'};
+  if (!confirm(`Set order ${orderId} to: ${labels[status]}?`)) return;
+  const res = await fetch(`/admin/orders/${orderId}/status`, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({status}),
+  });
+  if (res.ok) {
+    const el = document.getElementById(`status-${orderId}`);
+    el.textContent = status.replace('_',' ').toUpperCase();
+    el.className = `badge badge-${status}`;
+    showToast(`Order updated to ${labels[status]}`, 'success');
+  } else {
+    showToast('Failed to update order', 'error');
+  }
+}
+
+function viewDetails(orderId, order) {
+  const details = order.details || {};
+  let rows = Object.entries(details).map(([k,v]) =>
+    `<tr><td class="text-muted">${k}</td><td><strong>${v}</strong></td></tr>`
+  ).join('');
+  document.getElementById('modalContent').innerHTML = `
+    <table class="data-table">
+      <tr><td class="text-muted">Order ID</td><td><code>${order.order_id}</code></td></tr>
+      <tr><td class="text-muted">Service</td><td>${order.service}</td></tr>
+      <tr><td class="text-muted">User ID</td><td><code>${order.user_id}</code></td></tr>
+      <tr><td class="text-muted">TXN ID</td><td><code>${order.txn_id}</code></td></tr>
+      <tr><td class="text-muted">Amount</td><td><strong>৳${order.amount_bdt}</strong></td></tr>
+      <tr><td class="text-muted">Status</td><td><span class="badge badge-${order.status}">${order.status}</span></td></tr>
+      <tr><td class="text-muted">Date</td><td>${order.created_at?.slice(0,19)}</td></tr>
+      ${rows}
+    </table>`;
+  document.getElementById('orderModal').classList.remove('hidden');
+}
+
+function closeModal() {
+  document.getElementById('orderModal').classList.add('hidden');
+}
+</script>
+{% endblock %}
+{% endblock %}

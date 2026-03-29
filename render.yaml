@@ -1,0 +1,33 @@
+services:
+  - type: web
+    name: tg-business-bot
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn admin.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: BOT_TOKEN
+        sync: false
+      - key: OWNER_ID
+        sync: false
+      - key: LOG_GROUP_ID
+        sync: false
+      - key: WEBHOOK_URL
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
+      - key: ADMIN_USERNAME
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: SECRET_KEY
+        sync: false
+      - key: PORT
+        value: "8000"
+      - key: APP_ENV
+        value: "production"
+      - key: PYTHON_VERSION
+        value: "3.12.9"
+    healthCheckPath: /health
+    autoDeploy: true

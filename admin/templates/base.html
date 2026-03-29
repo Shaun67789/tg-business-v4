@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{% block title %}Admin Panel{% endblock %} — TG Business</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/static/css/style.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+<div class="layout">
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="logo">
+        <span class="logo-icon">⚡</span>
+        <span class="logo-text">TG Business</span>
+      </div>
+      <button class="sidebar-toggle" id="sidebarToggle">☰</button>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="/admin/" class="nav-item {% if current_page=='dashboard' %}active{% endif %}">
+        <span class="nav-icon">📊</span><span class="nav-label">Dashboard</span>
+      </a>
+      <a href="/admin/orders/" class="nav-item {% if current_page=='orders' %}active{% endif %}">
+        <span class="nav-icon">📦</span><span class="nav-label">Orders</span>
+      </a>
+      <a href="/admin/users/" class="nav-item {% if current_page=='users' %}active{% endif %}">
+        <span class="nav-icon">👥</span><span class="nav-label">Users</span>
+      </a>
+      <a href="/admin/broadcast/" class="nav-item {% if current_page=='broadcast' %}active{% endif %}">
+        <span class="nav-icon">📢</span><span class="nav-label">Broadcast</span>
+      </a>
+      <a href="/admin/referrals/" class="nav-item {% if current_page=='referrals' %}active{% endif %}">
+        <span class="nav-icon">🔗</span><span class="nav-label">Referrals</span>
+      </a>
+      <a href="/admin/stats/" class="nav-item {% if current_page=='stats' %}active{% endif %}">
+        <span class="nav-icon">📈</span><span class="nav-label">Statistics</span>
+      </a>
+      <a href="/admin/settings/" class="nav-item {% if current_page=='settings' %}active{% endif %}">
+        <span class="nav-icon">⚙️</span><span class="nav-label">Settings</span>
+      </a>
+      <div class="nav-divider"></div>
+      <a href="/admin/logout" class="nav-item nav-logout">
+        <span class="nav-icon">🚪</span><span class="nav-label">Logout</span>
+      </a>
+    </nav>
+  </aside>
+
+  <!-- Main content -->
+  <main class="main-content">
+    <header class="topbar">
+      <div class="topbar-left">
+        <h1 class="page-title">{% block page_title %}Dashboard{% endblock %}</h1>
+      </div>
+      <div class="topbar-right">
+        <div class="admin-badge">
+          <span class="badge-dot"></span>
+          <span>Admin</span>
+        </div>
+      </div>
+    </header>
+
+    <div class="content-area">
+      {% block content %}{% endblock %}
+    </div>
+  </main>
+</div>
+
+<!-- Toast container -->
+<div id="toastContainer" class="toast-container"></div>
+
+<script src="/static/js/admin.js"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

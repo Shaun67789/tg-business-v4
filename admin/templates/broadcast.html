@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{% block title %}Broadcast{% endblock %}
+{% block page_title %}📢 Broadcast System{% endblock %}
+
+{% block content %}
+<div class="row-2col mb-4" style="grid-template-columns:1fr 380px">
+  <!-- Compose -->
+  <div class="glass-card">
+    <h3 class="card-title">✍️ Compose Broadcast</h3>
+    <div class="form-group">
+      <label class="form-label">Message Type</label>
+      <select id="bcType" class="form-select" onchange="togglePhotoFields()">
+        <option value="text">📝 Text Only</option>
+        <option value="photo">📸 Photo + Caption</option>
+      </select>
+    </div>
+    <div id="textFields">
+      <div class="form-group">
+        <label class="form-label">Message Text (HTML supported)</label>
+        <textarea id="bcText" class="form-input" rows="7" placeholder="Enter broadcast message…&#10;&#10;You can use &lt;b&gt;bold&lt;/b&gt;, &lt;i&gt;italic&lt;/i&gt;, &lt;code&gt;code&lt;/code&gt;"></textarea>
+      </div>
+    </div>
+    <div id="photoFields" class="hidden">
+      <div class="form-group">
+        <label class="form-label">Image URL</label>
+        <input type="url" id="bcImageUrl" class="form-input" placeholder="https://example.com/image.jpg"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Caption (HTML supported)</label>
+        <textarea id="bcCaption" class="form-input" rows="5" placeholder="Image caption…"></textarea>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Target</label>
+      <select id="bcTarget" class="form-select" onchange="toggleTargetIds()">
+        <option value="all">📢 All Users ({{ total_users }} users)</option>
+        <option value="specific">🎯 Specific User IDs</option>
+      </select>
+    </div>
+    <div id="specificIds" class="form-group hidden">
+      <label class="form-label">User IDs (comma separated)</label>
+      <textarea id="bcIds" class="form-input" rows="3" placeholder="123456789, 987654321"></textarea>
+    </div>
+    <div class="broadcast-actions">
+      <button class="btn btn-primary" onclick="sendBroadcast()">📤 Send Broadcast</button>
+      <button class="btn btn-ghost" onclick="previewMsg()">👁 Preview</button>
+    </div>
+    <div id="bcProgress" class="hidden mt-3">
+      <div class="progress-bar"><div class="progress-fill" id="bcProgressFill"></div></div>
+      <p class="text-muted text-sm mt-1" id="bcProgressText">Sending…</p>
+    </div>
+  </div>
+
+  <!-- History -->
+  <div class="glass-card">
+    <h3 class="card-title">📋 Broadcast History</h3>
+    <div class="broadcast-history" id="bcHistory">
+      {% for bc in broadcasts %}
+      <div class="bc-item" id="bc-{{ bc.id }}">
+        <div class="bc-item-header">
+          <span class="badge badge-{{ 'confirmed' if bc.status=='completed' else 'pending' }}">{{ bc.status }}</span>
+          <span class="text-muted text-sm">{{ bc.sent_at[:16] if bc.sent_at else '—' }}</span>
+        </div>
+        <div class="bc-item-meta">
+          <span>Type: <strong>{{ bc.message_type }}</strong></span>
+          <span>📢 {{ bc.target }}</span>
+        </div>
+        <div class="bc-item-stats">
+          <span class="text-green">✅ {{ bc.success_count }}</span>
+          <span class="text-red">❌ {{ bc.fail_count }}</span>
+        </div>
+        <button class="btn btn-xs btn-red mt-1" onclick="deleteBroadcast({{ bc.id }})">🗑 Delete</button>
+      </div>
+      {% else %}
+      <p class="text-muted text-center">No broadcasts yet</p>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+{% block scripts %}
+<script>
+function togglePhotoFields() {
+  const type = document.getElementById('bcType').value;
+  document.getElementById('textFields').classList.toggle('hidden', type !== 'text');
+  document.getElementById('photoFields').classList.toggle('hidden', type !== 'photo');
+}
+function toggleTargetIds() {
+  const target = document.getElementById('bcTarget').value;
+  document.getElementById('specificIds').classList.toggle('hidden', target !== 'specific');
+}
+
+async function sendBroadcast() {
+  const type = document.getElementById('bcType').value;
+  const target = document.getElementById('bcTarget').value;
+  let content = {};
+  if (type === 'text') {
+    const text = document.getElementById('bcText').value.trim();
+    if (!text) return showToast('Enter message text', 'error');
+    content = {text};
+  } else {
+    const url = document.getElementById('bcImageUrl').value.trim();
+    const caption = document.getElementById('bcCaption').value.trim();
+    if (!url) return showToast('Enter image URL', 'error');
+    content = {url, caption};
+  }
+  let target_ids = [];
+  if (target === 'specific') {
+    target_ids = document.getElementById('bcIds').value.split(',').map(x=>x.trim()).filter(Boolean);
+    if (!target_ids.length) return showToast('Enter at least one user ID', 'error');
+  }
+
+  document.getElementById('bcProgress').classList.remove('hidden');
+  document.getElementById('bcProgressText').textContent = 'Sending broadcast…';
+
+  const res = await fetch('/admin/broadcast/send', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({type, content, target, target_ids}),
+  });
+  const data = await res.json();
+  document.getElementById('bcProgress').classList.add('hidden');
+  if (res.ok) {
+    showToast(`✅ Sent: ${data.success} | ❌ Failed: ${data.fail}`, 'success');
+    setTimeout(() => location.reload(), 1500);
+  } else showToast('Broadcast failed', 'error');
+}
+
+async function deleteBroadcast(id) {
+  if (!confirm('Delete this broadcast record?')) return;
+  const res = await fetch(`/admin/broadcast/${id}`, {method:'DELETE'});
+  if (res.ok) {
+    document.getElementById(`bc-${id}`).remove();
+    showToast('Broadcast deleted','success');
+  }
+}
+</script>
+{% endblock %}
+{% endblock %}

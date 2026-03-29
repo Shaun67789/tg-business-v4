@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}Referrals{% endblock %}
+{% block page_title %}🔗 Referral Links{% endblock %}
+
+{% block content %}
+<div class="row-2col mb-4" style="grid-template-columns:1fr 360px">
+  <div class="glass-card">
+    <h3 class="card-title">Active Referral Links</h3>
+    <div class="table-wrapper">
+      <table class="data-table">
+        <thead><tr><th>Code</th><th>Label</th><th>Info</th><th>Clicks</th><th>Conversions</th><th>Link</th><th>Actions</th></tr></thead>
+        <tbody id="refTableBody">
+        {% for link in links %}
+        <tr id="ref-{{ link.id }}">
+          <td><code>{{ link.code }}</code></td>
+          <td>{{ link.label }}</td>
+          <td class="text-muted text-sm">{{ link.created_info or '—' }}</td>
+          <td><span class="badge badge-pending">{{ link.clicks }}</span></td>
+          <td><span class="badge badge-confirmed">{{ link.conversions }}</span></td>
+          <td>
+            {% if bot_username %}
+            <button class="btn btn-xs btn-ghost" onclick="copyLink('https://t.me/{{ bot_username }}?start=ref_{{ link.code }}')">📋 Copy</button>
+            {% endif %}
+          </td>
+          <td>
+            <button class="btn btn-xs btn-red" onclick="deleteLink({{ link.id }})">🗑 Delete</button>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" class="text-center text-muted">No referral links yet</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="glass-card">
+    <h3 class="card-title">➕ Create New Link</h3>
+    <div class="form-group">
+      <label class="form-label">Label / Name</label>
+      <input type="text" id="newLabel" class="form-input" placeholder="e.g. Instagram Campaign"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Custom Code (optional)</label>
+      <input type="text" id="newCode" class="form-input" placeholder="Auto-generated if empty"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">User Info / Notes</label>
+      <textarea id="newInfo" class="form-input" rows="3" placeholder="Any notes about this link…"></textarea>
+    </div>
+    <button class="btn btn-primary btn-full" onclick="createLink()">🔗 Create Link</button>
+  </div>
+</div>
+
+{% block scripts %}
+<script>
+async function createLink() {
+  const label = document.getElementById('newLabel').value.trim();
+  const code = document.getElementById('newCode').value.trim();
+  const info = document.getElementById('newInfo').value.trim();
+  if (!label) return showToast('Enter a label', 'error');
+  const res = await fetch('/admin/referrals/create', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({label, code: code || null, created_info: info}),
+  });
+  if (res.ok) {
+    showToast('✅ Referral link created!', 'success');
+    setTimeout(() => location.reload(), 800);
+  } else showToast('Failed to create link', 'error');
+}
+
+async function deleteLink(id) {
+  if (!confirm('Delete this referral link?')) return;
+  const res = await fetch(`/admin/referrals/${id}`, {method:'DELETE'});
+  if (res.ok) {
+    document.getElementById(`ref-${id}`).remove();
+    showToast('Link deleted', 'success');
+  }
+}
+
+function copyLink(url) {
+  navigator.clipboard.writeText(url).then(() => showToast('Link copied!', 'success'));
+}
+</script>
+{% endblock %}
+{% endblock %}
